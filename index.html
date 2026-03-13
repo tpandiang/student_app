@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dr. Thiru Pandian - CV</title>
+  <style>
+    :root {
+      --primary: #c75b12;
+      --primary-dark: #a04a0f;
+      --accent: #008542;
+      --bg: #f8f9fa;
+      --card: #ffffff;
+      --text: #2d3748;
+      --text-light: #64748b;
+      --border: #e2e8f0;
+      --section-bg: #fefefe;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* ── Navigation ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+    }
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 4px;
+      max-width: 960px;
+      margin: 0 auto;
+      overflow-x: auto;
+    }
+    nav a {
+      display: block;
+      padding: 14px 16px;
+      text-decoration: none;
+      color: var(--text-light);
+      font-size: 0.85rem;
+      font-weight: 500;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    nav a:hover, nav a.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #fff;
+      padding: 72px 24px 56px;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: 2.6rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+    .hero .subtitle {
+      font-size: 1.15rem;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+    .hero .affiliation {
+      font-size: 0.95rem;
+      color: #64748b;
+    }
+    .hero .profile-photo {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid rgba(255,255,255,0.3);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      margin-bottom: 20px;
+    }
+    .hero .utd-badge {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 6px 20px;
+      border: 1px solid rgba(199,91,18,0.6);
+      border-radius: 20px;
+      color: #e8a06c;
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ── Container ── */
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Section ── */
+    .section {
+      padding: 48px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .section:last-child { border-bottom: none; }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 28px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--primary);
+      display: inline-block;
+    }
+
+    /* ── Education ── */
+    .edu-grid {
+      display: grid;
+      gap: 16px;
+    }
+    .edu-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 16px 20px;
+      background: var(--card);
+      border-radius: 8px;
+      border-left: 3px solid var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .edu-item .degree {
+      font-weight: 700;
+      color: var(--text);
+      margin-right: 8px;
+    }
+    .edu-item .school {
+      color: var(--text-light);
+      font-size: 0.9rem;
+    }
+    .edu-item .year {
+      color: var(--text-light);
+      font-size: 0.85rem;
+      white-space: nowrap;
+      margin-left: 16px;
+    }
+
+    /* ── Certifications ── */
+    .cert-category {
+      margin-bottom: 24px;
+    }
+    .cert-category h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-light);
+      margin-bottom: 12px;
+    }
+    .cert-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .cert-tag {
+      padding: 8px 16px;
+      background: linear-gradient(135deg, #f0f4ff, #e8f0fe);
+      border: 1px solid #d0daf0;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #334155;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .cert-tag:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+    }
+
+    /* ── Experience timeline ── */
+    .timeline {
+      position: relative;
+      padding-left: 28px;
+    }
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 6px;
+      top: 8px;
+      bottom: 8px;
+      width: 2px;
+      background: var(--border);
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 32px;
+      padding: 20px 24px;
+      background: var(--card);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -25px;
+      top: 26px;
+      width: 10px;
+      height: 10px;
+      background: var(--primary);
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 2px var(--primary);
+    }
+    .timeline-item h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .timeline-item .role {
+      color: var(--primary-dark);
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .timeline-item .period {
+      font-size: 0.8rem;
+      color: var(--text-light);
+      margin-top: 2px;
+    }
+
+    /* ── Teaching courses ── */
+    .courses-group {
+      margin-top: 14px;
+    }
+    .courses-group h4 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .course-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 6px;
+    }
+    .course {
+      font-size: 0.88rem;
+      padding: 6px 0;
+      color: var(--text);
+    }
+    .course code {
+      font-weight: 600;
+      color: var(--primary-dark);
+      margin-right: 6px;
+      font-size: 0.82rem;
+    }
+
+    /* ── Research interests ── */
+    .interests-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .interest-card {
+      padding: 16px 20px;
+      background: var(--card);
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      font-size: 0.92rem;
+      font-weight: 500;
+      transition: transform 0.15s;
+    }
+    .interest-card:hover {
+      transform: translateX(4px);
+    }
+
+    /* ── Publications ── */
+    .pub-group {
+      margin-bottom: 28px;
+    }
+    .pub-group h3 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-light);
+      margin-bottom: 14px;
+    }
+    .pub-item {
+      padding: 14px 18px;
+      background: var(--card);
+      border-radius: 8px;
+      border-left: 3px solid #6366f1;
+      margin-bottom: 10px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .pub-item em { color: var(--primary-dark); }
+
+    /* ── Awards ── */
+    .award-item {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      padding: 14px 18px;
+      background: var(--card);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      border-left: 3px solid #eab308;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .award-year {
+      font-weight: 700;
+      color: var(--primary);
+      white-space: nowrap;
+    }
+
+    /* ── Affiliations ── */
+    .affil-list {
+      display: grid;
+      gap: 10px;
+    }
+    .affil-item {
+      padding: 14px 18px;
+      background: var(--card);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      font-size: 0.92rem;
+    }
+    .affil-item strong { color: var(--text); }
+    .affil-item .since {
+      color: var(--text-light);
+      font-size: 0.82rem;
+      margin-left: 8px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 32px 24px;
+      color: var(--text-light);
+      font-size: 0.82rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      .hero h1 { font-size: 1.8rem; }
+      .edu-item { flex-direction: column; gap: 4px; }
+      .edu-item .year { margin-left: 0; }
+      .course-list { grid-template-columns: 1fr; }
+      nav a { padding: 12px 10px; font-size: 0.78rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav>
+  <ul>
+    <li><a href="#education" class="active">Education</a></li>
+    <li><a href="#certifications">Certifications</a></li>
+    <li><a href="#teaching">Teaching</a></li>
+    <li><a href="#experience">Experience</a></li>
+    <li><a href="#research">Research</a></li>
+    <li><a href="#publications">Publications</a></li>
+    <li><a href="#awards">Awards</a></li>
+    <li><a href="#affiliations">Affiliations</a></li>
+  </ul>
+</nav>
+
+<!-- Hero -->
+<header class="hero">
+  <img src="profile.jpg" alt="Dr. Thiru Pandian" class="profile-photo">
+  <h1>Dr. Thiru Pandian</h1>
+  <p class="subtitle">Assistant Professor of Instruction</p>
+  <p class="affiliation">School of Management, University of Texas at Dallas</p>
+  <span class="utd-badge">UTD School of Management</span>
+</header>
+
+<div class="container">
+
+  <!-- Education -->
+  <section class="section" id="education">
+    <h2 class="section-title">Education</h2>
+    <div class="edu-grid">
+      <div class="edu-item">
+        <div><span class="degree">PhD</span><span class="school">Information Security &mdash; University of North Texas</span></div>
+        <span class="year">2020 &ndash; 2024</span>
+      </div>
+      <div class="edu-item">
+        <div><span class="degree">MBA</span><span class="school">IT Management &mdash; Eastern Michigan University</span></div>
+        <span class="year">2003 &ndash; 2005</span>
+      </div>
+      <div class="edu-item">
+        <div><span class="degree">MS</span><span class="school">Information Systems &mdash; Eastern Michigan University</span></div>
+        <span class="year">2000 &ndash; 2002</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Certifications -->
+  <section class="section" id="certifications">
+    <h2 class="section-title">Professional Certifications</h2>
+
+    <div class="cert-category">
+      <h3>Cyber Security</h3>
+      <div class="cert-tags">
+        <span class="cert-tag">Security+ (CompTIA)</span>
+        <span class="cert-tag">CCSP</span>
+        <span class="cert-tag">CISSP</span>
+        <span class="cert-tag">CISM</span>
+        <span class="cert-tag">CCSK</span>
+      </div>
+    </div>
+
+    <div class="cert-category">
+      <h3>Database</h3>
+      <div class="cert-tags">
+        <span class="cert-tag">Oracle DBA Certified Professional</span>
+        <span class="cert-tag">Oracle Certified Professional, MySQL</span>
+      </div>
+    </div>
+
+    <div class="cert-category">
+      <h3>Cloud</h3>
+      <div class="cert-tags">
+        <span class="cert-tag">AWS Solutions Architect Associate</span>
+        <span class="cert-tag">AWS Cloud Practitioner</span>
+        <span class="cert-tag">AWS Academy Accredited Educator</span>
+        <span class="cert-tag">Google Cloud Digital Leader</span>
+        <span class="cert-tag">Oracle Cloud Architect Professional</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Teaching Experience -->
+  <section class="section" id="teaching">
+    <h2 class="section-title">Teaching Experience</h2>
+    <div class="timeline">
+
+      <div class="timeline-item">
+        <h3>University of Texas at Dallas</h3>
+        <p class="role">Assistant Professor, School of Management</p>
+        <p class="period">Aug 2022 &ndash; Present</p>
+        <div class="courses-group">
+          <h4>Undergraduate</h4>
+          <div class="course-list">
+            <div class="course"><code>ITSS 4300</code> Database Fundamentals</div>
+            <div class="course"><code>ITSS 4v95</code> Cybersecurity in Cloud Computing</div>
+            <div class="course"><code>ITSS 4351</code> Foundations of Business Intelligence</div>
+          </div>
+        </div>
+        <div class="courses-group">
+          <h4>Graduate</h4>
+          <div class="course-list">
+            <div class="course"><code>BUAN 6320</code> Database Foundations for Business Analytics</div>
+            <div class="course"><code>BUAN 6340</code> Programming for Data Science &ndash; Python</div>
+            <div class="course"><code>BUAN 6309</code> Business Data Warehousing</div>
+            <div class="course"><code>BUAN 6363</code> Cloud Computing Fundamentals</div>
+            <div class="course"><code>BUAN 6356</code> Business Analytics with R</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="timeline-item">
+        <h3>University of Texas at Dallas</h3>
+        <p class="role">Adjunct Faculty</p>
+        <p class="period">Aug 2019 &ndash; July 2022</p>
+        <div class="courses-group">
+          <h4>Undergraduate</h4>
+          <div class="course-list">
+            <div class="course"><code>ITSS 4300</code> Database Fundamentals</div>
+            <div class="course"><code>ITSS 4351</code> Foundations of Business Intelligence</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Professional Experience -->
+  <section class="section" id="experience">
+    <h2 class="section-title">Professional Experience</h2>
+    <div class="timeline">
+      <div class="timeline-item">
+        <h3>Citi Bank</h3>
+        <p class="role">Database &amp; Cloud Security</p>
+        <p class="period">2021 &ndash; 2022</p>
+      </div>
+      <div class="timeline-item">
+        <h3>Oracle Corporation</h3>
+        <p class="role">Technical Architect (Database &amp; Cloud)</p>
+        <p class="period">2006 &ndash; 2022</p>
+      </div>
+      <div class="timeline-item">
+        <h3>ProQuest</h3>
+        <p class="role">Sr. Database Administrator</p>
+        <p class="period">2000 &ndash; 2005</p>
+      </div>
+      <div class="timeline-item">
+        <h3>Zensar Technologies</h3>
+        <p class="role">Database Developer / Programmer</p>
+        <p class="period">1993 &ndash; 1999</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Research Interests -->
+  <section class="section" id="research">
+    <h2 class="section-title">Research Interests</h2>
+    <div class="interests-grid">
+      <div class="interest-card">Information Security &amp; Privacy</div>
+      <div class="interest-card">Data Compliance &amp; Audit</div>
+      <div class="interest-card">Database Management</div>
+      <div class="interest-card">Big Data Analytics</div>
+      <div class="interest-card">Cloud Security</div>
+      <div class="interest-card">Cyber Threat Intelligence</div>
+      <div class="interest-card">Blockchain &amp; Distributed Ledger</div>
+      <div class="interest-card">AI in Cybersecurity</div>
+    </div>
+  </section>
+
+  <!-- Publications -->
+  <section class="section" id="publications">
+    <h2 class="section-title">Publications</h2>
+
+    <div class="pub-group">
+      <h3>Conference Papers</h3>
+      <div class="pub-item">
+        Pandian, T., Tincher, B., &amp; Malin, E. (2023). <em>Information Security in Online Learning using Blockchain Technology.</em> Association for the Advancement of Computing in Education (AACE).
+      </div>
+      <div class="pub-item">
+        T. Pandian (2023). <em>Information and Multimedia Security in Online Learning Environment.</em> INTED2023 Proceedings, pp. 1166&ndash;1171.
+      </div>
+      <div class="pub-item">
+        Pandian, T. (2023). <em>Students' Perceptions of Information Security in Online Platforms.</em> 4th South American Conference on Industrial Engineering &amp; Operation Management, Lima, Peru.
+      </div>
+    </div>
+
+    <div class="pub-group">
+      <h3>Journal Papers in Review</h3>
+      <div class="pub-item">
+        Pandian, T., Mathew, A., Samaranayake, N., &amp; Warren, S. <em>Evaluating the Potential Return on Investment for a Proposed Educational Sustainability Project: Analyzing Costs, Learning Returns, and Potential Service Value.</em>
+      </div>
+      <div class="pub-item">
+        Mathew, A., Pandian, T., Samaranayake, N., &amp; Warren, S. <em>Design of a Sustainable Internet-Supported Educational Support System for Rural and Underserved Communities.</em>
+      </div>
+      <div class="pub-item">
+        Samaranayake, N., Mathew, A., Pandian, T., &amp; Warren, S. <em>Planning for Implementation of Resilient Sustainable Systems.</em>
+      </div>
+    </div>
+  </section>
+
+  <!-- Presentations -->
+  <section class="section" id="presentations">
+    <h2 class="section-title">Presentations</h2>
+    <div class="pub-item">
+      Pandian, T., Tincher, B., &amp; Malin, E. (2023). <em>Information Security in Online Learning using Blockchain Technology.</em> AACE.
+    </div>
+    <div class="pub-item">
+      T. Pandian (2023). <em>Information and Multimedia Security in Online Learning Environment.</em> INTED2023.
+    </div>
+    <div class="pub-item">
+      Pandian, T. (2023). <em>Students' Perceptions of Information Security in Online Platforms.</em> 4th South American Conf. on Industrial Eng. &amp; Operation Mgmt., Lima, Peru.
+    </div>
+    <div class="pub-item">
+      Pandian, T. (2023). <em>Information Security in Online Learning Platforms: Perceptions after Covid-19.</em> 8th Intl. Conf. on Internet of Things, Big Data and Security.
+    </div>
+    <div class="pub-item">
+      Pandian, T. (2023). <em>Cybersecurity in Learning Tools.</em> 8th North American Conf. on Industrial Engineering and Operations Management.
+    </div>
+  </section>
+
+  <!-- Awards -->
+  <section class="section" id="awards">
+    <h2 class="section-title">Honors &amp; Awards</h2>
+    <div class="award-item">
+      <span class="award-year">2018</span>
+      <div>Oracle Pacesetter Award for excellent customer satisfaction</div>
+    </div>
+    <div class="award-item">
+      <span class="award-year">2009</span>
+      <div>Oracle Pacesetter Award for excellent customer satisfaction</div>
+    </div>
+  </section>
+
+  <!-- Professional Affiliations -->
+  <section class="section" id="affiliations">
+    <h2 class="section-title">Professional Affiliations</h2>
+    <div class="affil-list">
+      <div class="affil-item">
+        <strong>The International Information System Security Certification Consortium (ISC2)</strong>
+        <span class="since">2020 &ndash; Present</span>
+      </div>
+      <div class="affil-item">
+        <strong>Information Systems Audit and Control Association (ISACA)</strong>
+        <span class="since">2021 &ndash; Present</span>
+      </div>
+      <div class="affil-item">
+        <strong>The Computing Technology Industry Association (CompTIA)</strong>
+        <span class="since">2021 &ndash; Present</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  &copy; 2024 Dr. Thiru Pandian &mdash; University of Texas at Dallas
+</footer>
+
+<!-- Smooth scroll & active nav -->
+<script>
+  const links = document.querySelectorAll('nav a');
+  const sections = document.querySelectorAll('.section');
+
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => {
+      if (window.scrollY >= s.offsetTop - 80) current = s.id;
+    });
+    links.forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+    });
+  });
+</script>
+
+</body>
+</html>

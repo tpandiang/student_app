@@ -1,0 +1,17 @@
+# Uploaded/cleaned PDFs
+pdf-cleaner/uploads/
+pdf-cleaner/cleaned/
+
+# Student data (sensitive)
+student-lookup/students.db
+student-lookup/downloads/
+student-lookup/chrome_profile/
+student-lookup/__pycache__/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+Thumbs.db
+.DS_Store
