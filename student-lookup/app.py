@@ -4,20 +4,23 @@ Search students by name/NetID, view Outlook emails, sync grades from Blackboard.
 """
 
 import os
+import re
 import json
 import sqlite3
 import threading
 import time
 import glob as glob_mod
 import urllib.parse as urllib_parse
+from datetime import datetime, timedelta
 import requests as http_requests
-from flask import Flask, request, redirect, url_for, flash, jsonify, get_flashed_messages
+from flask import Flask, request, redirect, url_for, flash, jsonify, get_flashed_messages, send_from_directory
 
 # ── Configuration ────────────────────────────────────────────────────────────
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(SCRIPT_DIR, "students.db")
 CHROME_PROFILE = os.path.join(SCRIPT_DIR, "chrome_profile")
 DOWNLOAD_DIR = os.path.join(SCRIPT_DIR, "downloads")
+SYLLABI_DIR = os.path.join(SCRIPT_DIR, "syllabi")
 PORT = 8081
 MAX_EMAILS = 15
 BB_URL = "https://elearning.utdallas.edu"
@@ -42,6 +45,61 @@ BB_COURSE_IDS = {
     "buan4351.002": "_410533_1",
     "buan4351.003": "_410592_1",
 }
+
+WEEKLY_COURSES = [
+    {"key": "buan6320.s01",  "label": "BUAN 6320.S01", "day": "Monday",    "time": "4:00 PM",  "day_num": 0},
+    {"key": "buan4320.502",  "label": "BUAN 4320.502", "day": "Tuesday",   "time": "7:00 PM",  "day_num": 1},
+    {"key": "itss4351.003",  "label": "ITSS 4351.003", "day": "Tuesday",   "time": "4:00 PM",  "day_num": 1},
+    {"key": "buan4320.501",  "label": "BUAN 4320.501", "day": "Wednesday", "time": "7:00 PM",  "day_num": 2},
+    {"key": "itss4351.002",  "label": "ITSS 4351.002", "day": "Wednesday", "time": "10:00 AM", "day_num": 2},
+]
+
+def _parse_week_date(text):
+    """Parse syllabus week date like 'WK1- Jan 21', 'Mar 24', 'April 01'."""
+    text = re.sub(r'^WK\d+\s*[-\u2013\u2014]\s*', '', text.strip(), flags=re.IGNORECASE).strip()
+    for fmt in ('%b %d', '%B %d'):
+        try:
+            return datetime.strptime(text, fmt).replace(year=2026)
+        except ValueError:
+            continue
+    return None
+
+def _load_syllabi_schedules():
+    """Parse all syllabus .docx files and return {course_key: [{date, topic, reading, due}, ...]}."""
+    from docx import Document
+    schedules = {}
+    for course in WEEKLY_COURSES:
+        fpath = os.path.join(SYLLABI_DIR, f"{course['key']}.docx")
+        if not os.path.exists(fpath):
+            continue
+        doc = Document(fpath)
+        for table in doc.tables:
+            headers = [c.text.strip().lower() for c in table.rows[0].cells]
+            if not (any('week' in h for h in headers) and any('topic' in h for h in headers)):
+                continue
+            entries = []
+            for row in table.rows[1:]:
+                cells = [c.text.strip() for c in row.cells]
+                dt = _parse_week_date(cells[0])
+                if not dt:
+                    continue
+                entries.append({
+                    "date": dt,
+                    "topic": cells[1] if len(cells) > 1 else "",
+                    "reading": cells[2] if len(cells) > 2 else "",
+                    "due": cells[3] if len(cells) > 3 else "",
+                })
+            schedules[course['key']] = entries
+            break
+    return schedules
+
+# Cache parsed syllabi (loaded once at startup)
+_syllabi_cache = None
+def get_syllabi():
+    global _syllabi_cache
+    if _syllabi_cache is None:
+        _syllabi_cache = _load_syllabi_schedules()
+    return _syllabi_cache
 
 def bb_gradebook_url(course_raw, student_name=""):
     """Return Blackboard gradebook URL for a course, optionally with student search."""
@@ -988,6 +1046,15 @@ body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 .nav-link { color: rgba(255,255,255,0.85); text-decoration: none;
              padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.9rem; }
 .nav-link:hover, .nav-link.active { background: rgba(255,255,255,0.15); color: #fff; }
+.nav-dropdown { position: relative; display: flex; align-items: center; height: 56px; }
+.nav-dropdown > .nav-link { cursor: pointer; display: flex; align-items: center; height: 100%; }
+.nav-dropdown-menu { display: none; position: absolute; top: 56px; left: 0;
+    background: #a84e10; border-radius: 0 0 6px 6px; min-width: 160px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 200; padding: 0.25rem 0; }
+.nav-dropdown:hover .nav-dropdown-menu { display: block; }
+.nav-dropdown-menu a { display: block; color: rgba(255,255,255,0.9); text-decoration: none;
+    padding: 0.5rem 1rem; font-size: 0.85rem; white-space: nowrap; }
+.nav-dropdown-menu a:hover { background: rgba(255,255,255,0.15); color: #fff; }
 .container { max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
 .card { background: #fff; border-radius: 8px; padding: 2rem;
          box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
@@ -1153,6 +1220,35 @@ a:hover { text-decoration: underline; }
 .sync-log .msg { margin: 0.1rem 0; }
 .sync-log .msg::before { content: "> "; color: #008542; }
 .sync-log .error { color: #f44; }
+.picks-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.picks-table th { padding: 0.5rem 0.6rem; text-align: center; font-size: 0.75rem;
+    text-transform: uppercase; letter-spacing: 0.3px; color: #fff; }
+.picks-table thead tr:first-child th { background: #333; }
+.picks-table thead tr:nth-child(2) th { font-size: 0.7rem; }
+.th-agg { background: #c62828 !important; }
+.th-mod { background: #e65100 !important; }
+.th-con { background: #2e7d32 !important; }
+.picks-table td { padding: 0.45rem 0.6rem; border-bottom: 1px solid #eee; }
+.picks-table tr:hover td { background: #f5f5f5; }
+.picks-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.pick-agg { color: #c62828; font-weight: 600; }
+.pick-mod { color: #e65100; font-weight: 600; }
+.pick-con { color: #2e7d32; font-weight: 600; }
+.my-position td { background: #fff8e1 !important; }
+.my-position:hover td { background: #fff3c4 !important; }
+.my-badge { display: inline-block; background: #c75b12; color: #fff; font-size: 0.6rem;
+    padding: 0.1rem 0.35rem; border-radius: 3px; font-weight: 700; margin-left: 0.4rem;
+    vertical-align: middle; letter-spacing: 0.5px; }
+.wa-course { border-left: 3px solid #c75b12; padding: 0.6rem 1rem; margin-bottom: 0.75rem;
+             background: #fafafa; border-radius: 0 6px 6px 0; }
+.wa-course:last-child { margin-bottom: 0; }
+.wa-course-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem; }
+.wa-course-header strong { color: #333; font-size: 0.95rem; }
+.wa-time { color: #c75b12; font-weight: 600; font-size: 0.85rem; }
+.wa-detail { font-size: 0.88rem; color: #555; padding: 0.15rem 0; }
+.wa-label { font-weight: 600; color: #333; display: inline-block; min-width: 65px; }
+.wa-due { color: #b71c1c; }
+.wa-due .wa-label { color: #b71c1c; }
 @media (max-width: 600px) {
   .search-box { flex-direction: column; }
   td, th { padding: 0.4rem; font-size: 0.8rem; }
@@ -1497,6 +1593,8 @@ def base_html(title, body, active="", extra_js=""):
     upload_cls = "active" if active == "upload" else ""
     sync_cls = "active" if active == "sync" else ""
     grading_cls = "active" if active == "grading" else ""
+    weekly_cls = "active" if active == "weekly" else ""
+    picks_cls = "active" if active == "picks" else ""
     flashes = get_flashed_messages(with_categories=True)
     flash_html = "".join(
         f'<div class="flash flash-{cat}">{msg}</div>' for cat, msg in flashes
@@ -1516,6 +1614,16 @@ def base_html(title, body, active="", extra_js=""):
   <a href="/upload" class="nav-link {upload_cls}">Upload</a>
   <a href="/sync" class="nav-link {sync_cls}">Sync Grades</a>
   <a href="/grading" class="nav-link {grading_cls}">Grading</a>
+  <div class="nav-dropdown">
+    <a href="/weekly" class="nav-link {weekly_cls}">Weekly &#9662;</a>
+    <div class="nav-dropdown-menu">
+      <a href="/weekly?day=monday">Monday</a>
+      <a href="/weekly?day=tuesday">Tuesday</a>
+      <a href="/weekly?day=wednesday">Wednesday</a>
+      <a href="/weekly">All Days</a>
+    </div>
+  </div>
+  <a href="/picks" class="nav-link {picks_cls}">Weekly Picks</a>
   <span style="margin-left:auto;">
     <a href="/course/buan4320.502" class="nav-link">4320.502</a>
     <a href="/course/itss4351.003" class="nav-link">4351.003</a>
@@ -1753,12 +1861,16 @@ def course_dashboard(ck):
 
     sync_btn = f"""<button class="btn btn-sm btn-sync" onclick="syncCourse(this, '{ck_val}')">Sync Grades</button>""" if bb_url else ""
 
+    syllabus_path = os.path.join(SYLLABI_DIR, f"{ck_val}.docx")
+    syllabus_btn = f'<a href="/syllabus/{ck_val}" class="btn btn-sm" style="text-decoration:none;">Syllabus</a>' if os.path.exists(syllabus_path) else ""
+
     body = f"""
     <a href="/search" class="back-link">&larr; Back to Search</a>
     <div class="card">
         <div class="course-header">
             <h1 style="margin:0;">{label}</h1>
             <div style="display:flex; gap:0.5rem; align-items:center;">
+                {syllabus_btn}
                 <button class="btn btn-sm" onclick="toggleGradeCol(this)">Show Grades</button>
                 {sync_btn}
             </div>
@@ -1788,6 +1900,290 @@ function toggleGradeCol(btn) {
 """ + EMAIL_JS
 
     return base_html(label, body, active="search", extra_js=course_js)
+
+@app.route("/weekly")
+def weekly():
+    """Show weekly course activities parsed from syllabi."""
+    schedules = get_syllabi()
+
+    # Determine target week
+    week_arg = request.args.get("week", "").strip()
+    if week_arg:
+        try:
+            target = datetime.strptime(week_arg, '%Y-%m-%d')
+        except ValueError:
+            target = datetime.now()
+    else:
+        target = datetime.now()
+
+    # Get Monday of the target week
+    week_monday = (target - timedelta(days=target.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    week_sunday = week_monday + timedelta(days=6)
+    prev_monday = week_monday - timedelta(weeks=1)
+    next_monday = week_monday + timedelta(weeks=1)
+
+    # Filter by day if specified
+    day_filter = request.args.get("day", "").strip().lower()
+    day_filter_num = {"monday": 0, "tuesday": 1, "wednesday": 2}.get(day_filter)
+
+    # Build day groups: {day_num: [(course_info, entry), ...]}
+    days = {}
+    for course in WEEKLY_COURSES:
+        if day_filter_num is not None and course['day_num'] != day_filter_num:
+            continue
+        entries = schedules.get(course['key'], [])
+        for entry in entries:
+            if week_monday <= entry['date'] <= week_sunday:
+                dn = course['day_num']
+                if dn not in days:
+                    days[dn] = []
+                days[dn].append((course, entry))
+                break
+
+    # Check if spring break
+    is_spring_break = any(
+        e.get('topic', '').lower().strip() == 'spring break'
+        for entries in schedules.values()
+        for e in entries
+        if week_monday <= e['date'] <= week_sunday
+    )
+
+    # Build the HTML
+    week_label = week_monday.strftime('%b %d') + " - " + week_sunday.strftime('%b %d, %Y')
+
+    # Navigation arrows (preserve day filter)
+    day_param = f"&day={day_filter}" if day_filter else ""
+    day_title = f" — {day_filter.title()}" if day_filter else ""
+
+    # Day filter tabs
+    day_tabs = '<div style="text-align:center; margin-bottom:1rem;">'
+    for d_name, d_val in [("All", ""), ("Monday", "monday"), ("Tuesday", "tuesday"), ("Wednesday", "wednesday")]:
+        active_style = "background:#c75b12; color:#fff;" if day_filter == d_val else "background:#eee; color:#333;"
+        d_href = f"/weekly?week={week_monday.strftime('%Y-%m-%d')}&day={d_val}" if d_val else f"/weekly?week={week_monday.strftime('%Y-%m-%d')}"
+        day_tabs += f' <a href="{d_href}" class="btn btn-sm" style="{active_style} margin:0 0.2rem;">{d_name}</a>'
+    day_tabs += '</div>'
+
+    nav_html = f'''
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <a href="/weekly?week={prev_monday.strftime('%Y-%m-%d')}{day_param}" class="btn btn-sm">&larr; Previous Week</a>
+        <h1 style="margin:0; text-align:center;">Week of {week_label}{day_title}</h1>
+        <a href="/weekly?week={next_monday.strftime('%Y-%m-%d')}{day_param}" class="btn btn-sm">Next Week &rarr;</a>
+    </div>
+    {day_tabs}
+    <div style="text-align:center; margin-bottom:1.5rem;">
+        <a href="/weekly{('?day=' + day_filter) if day_filter else ''}" class="btn btn-sm btn-green">Today</a>
+    </div>
+    '''
+
+    if is_spring_break:
+        content = f'''
+        {nav_html}
+        <div class="card" style="text-align:center; padding:3rem;">
+            <h2 style="color:#c75b12; font-size:1.5rem;">Spring Break</h2>
+            <p style="color:#666; margin-top:0.5rem;">No classes this week. Enjoy the break!</p>
+        </div>
+        '''
+        return base_html("Weekly Activities", content, active="weekly")
+
+    if not days:
+        content = f'''
+        {nav_html}
+        <div class="card" style="text-align:center; padding:2rem;">
+            <p class="empty">No activities found for this week.</p>
+        </div>
+        '''
+        return base_html("Weekly Activities", content, active="weekly")
+
+    day_cards = ""
+    for day_num in sorted(days.keys()):
+        day_date = week_monday + timedelta(days=day_num)
+        day_label = day_date.strftime('%A, %b %d')
+        # Sort by time (earlier classes first)
+        entries = sorted(days[day_num], key=lambda x: x[0]['time'])
+
+        course_rows = ""
+        for course, entry in entries:
+            topic = re.sub(r'\s+', ' ', entry['topic'].replace('\n', ', ')).strip()
+            reading = re.sub(r'\s+', ' ', entry['reading'].replace('\n', ', ')).strip()
+            due = re.sub(r'\s+', ' ', entry['due'].replace('\n', ' | ')).strip()
+
+            detail_rows = ""
+            if topic:
+                detail_rows += f'<div class="wa-detail"><span class="wa-label">Topic:</span> {topic}</div>'
+            if reading:
+                detail_rows += f'<div class="wa-detail"><span class="wa-label">Reading:</span> {reading}</div>'
+            if due:
+                detail_rows += f'<div class="wa-detail wa-due"><span class="wa-label">Due:</span> {due}</div>'
+
+            course_rows += f'''
+            <div class="wa-course">
+                <div class="wa-course-header">
+                    <a href="/course/{course['key']}" style="text-decoration:none; color:inherit;">
+                        <strong>{course['label']}</strong>
+                    </a>
+                    <span class="wa-time">{course['time']}</span>
+                </div>
+                {detail_rows}
+            </div>
+            '''
+
+        day_cards += f'''
+        <div class="card" style="margin-bottom:1rem;">
+            <h2 style="margin-bottom:0.75rem;">{day_label}</h2>
+            {course_rows}
+        </div>
+        '''
+
+    content = f"{nav_html}{day_cards}"
+    return base_html("Weekly Activities", content, active="weekly")
+
+CSP_API = "https://n8n-dfa-hwaeg9c0bag4ayc3.centralus-01.azurewebsites.net/webhook/csp-options"
+CSP_TICKERS = "AAPL,MSFT,NVDA,AMZN,GOOGL,META,TSLA,AVGO,AMD,ORCL,CRM,ADBE,INTC,IBM,QCOM,CSCO,TXN,MU,AMAT"
+CSP_DASHBOARD_URL = "https://ording.myqnapcloud.com:3084/?tickers=" + CSP_TICKERS
+MY_POSITIONS = {"NVDA", "AVGO", "AMZN"}
+
+def _picks_table_row(t, is_mine=False):
+    """Build a single table row for a ticker."""
+    p = t.get("picks", {})
+    mod = p.get("moderate", {})
+    agg = p.get("aggressive", {})
+    con = p.get("conservative", {})
+    price = t.get("price", 0)
+    cash = t.get("cashRequired", 0)
+    cls = ' class="my-position"' if is_mine else ""
+    badge = ' <span class="my-badge">MY</span>' if is_mine else ""
+    return f"""<tr{cls}>
+        <td><strong>{t['symbol']}</strong>{badge}</td>
+        <td class="num">${price:,.2f}</td>
+        <td class="num">{t.get('expiry','')}</td>
+        <td class="num">{agg.get('strike','')}</td>
+        <td class="num pick-agg">{agg.get('weeklyPct',0):.2f}%</td>
+        <td class="num pick-agg">{agg.get('annualPct',0):.1f}%</td>
+        <td class="num">{mod.get('strike','')}</td>
+        <td class="num pick-mod">{mod.get('weeklyPct',0):.2f}%</td>
+        <td class="num pick-mod">{mod.get('annualPct',0):.1f}%</td>
+        <td class="num">{con.get('strike','')}</td>
+        <td class="num pick-con">{con.get('weeklyPct',0):.2f}%</td>
+        <td class="num pick-con">{con.get('annualPct',0):.1f}%</td>
+        <td class="num">${cash:,}</td>
+    </tr>"""
+
+PICKS_TABLE_HEAD = """
+    <thead>
+        <tr>
+            <th rowspan="2">Ticker</th>
+            <th rowspan="2">Price</th>
+            <th rowspan="2">Expiry</th>
+            <th colspan="3" class="th-agg">Aggressive</th>
+            <th colspan="3" class="th-mod">Moderate</th>
+            <th colspan="3" class="th-con">Conservative</th>
+            <th rowspan="2">Cash Req.</th>
+        </tr>
+        <tr>
+            <th class="th-agg">Strike</th><th class="th-agg">Wk%</th><th class="th-agg">Ann%</th>
+            <th class="th-mod">Strike</th><th class="th-mod">Wk%</th><th class="th-mod">Ann%</th>
+            <th class="th-con">Strike</th><th class="th-con">Wk%</th><th class="th-con">Ann%</th>
+        </tr>
+    </thead>"""
+
+def _next_friday():
+    """Return next Friday's date (or this Friday if today is Mon-Thu)."""
+    today = datetime.now()
+    days_ahead = 4 - today.weekday()  # Friday = 4
+    if days_ahead <= 0:  # Already past Friday this week
+        days_ahead += 7
+    return (today + timedelta(days=days_ahead)).strftime('%b %d')
+
+def _parse_expiry(expiry_str):
+    """Parse 'Mar 16' style expiry to a date object."""
+    try:
+        return datetime.strptime(expiry_str.strip(), '%b %d').replace(year=2026)
+    except ValueError:
+        return None
+
+@app.route("/picks")
+def weekly_picks():
+    """Show CSP Options Weekly Picks dashboard."""
+    import ssl
+    import urllib.request
+
+    error_msg = ""
+    tickers_data = []
+    try:
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        data = json.dumps({"query": CSP_TICKERS}).encode()
+        req = urllib.request.Request(CSP_API, data=data,
+            headers={"Content-Type": "application/json", "User-Agent": "Mozilla/5.0"})
+        resp = urllib.request.urlopen(req, context=ctx, timeout=30)
+        result = json.loads(resp.read().decode())
+        tickers_data = result.get("tickers", [])
+    except Exception as e:
+        error_msg = f'<div class="flash flash-error">Failed to load options data: {e}</div>'
+
+    # Check for stale data on my positions
+    today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    next_fri = _next_friday()
+    stale_warning = ""
+    for t in tickers_data:
+        if t['symbol'] in MY_POSITIONS:
+            exp_date = _parse_expiry(t.get('expiry', ''))
+            if exp_date and exp_date <= today:
+                stale_warning = f'<div class="flash flash-error">Data is stale — API still showing expired {t.get("expiry","")} options. Your target expiry is <strong>{next_fri}</strong>. Data will refresh when markets update.</div>'
+                break
+
+    # Split into my positions (top) and watchlist (bottom)
+    my_tickers = [t for t in tickers_data if t['symbol'] in MY_POSITIONS]
+    watch_tickers = [t for t in tickers_data if t['symbol'] not in MY_POSITIONS]
+
+    my_rows = "".join(_picks_table_row(t, is_mine=True) for t in my_tickers)
+    watch_rows = "".join(_picks_table_row(t) for t in watch_tickers)
+
+    body = f"""
+    {error_msg}
+    {stale_warning}
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <h1 style="margin:0;">Weekly Picks — CSP Options</h1>
+            <a href="{CSP_DASHBOARD_URL}" target="_blank" class="btn btn-sm">Open Dashboard</a>
+        </div>
+        <p class="stats" style="margin:0.5rem 0;">Cash-Secured Put picks for {len(tickers_data)} tech stocks &middot; Target expiry: <strong>{next_fri}</strong></p>
+    </div>
+
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem;">
+            <h2 style="margin:0;">My Positions</h2>
+            <span class="stats">Target expiry: {next_fri}</span>
+        </div>
+        <div style="overflow-x:auto; margin-top:0.5rem;">
+        <table class="picks-table">
+            {PICKS_TABLE_HEAD}
+            <tbody>{my_rows}</tbody>
+        </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 style="margin-bottom:0.5rem;">Watchlist</h2>
+        <div style="overflow-x:auto;">
+        <table class="picks-table">
+            {PICKS_TABLE_HEAD}
+            <tbody>{watch_rows}</tbody>
+        </table>
+        </div>
+    </div>
+    """
+    return base_html("Weekly Picks", body, active="picks")
+
+@app.route("/syllabus/<ck>")
+def syllabus_download(ck):
+    """Serve the syllabus .docx file for a course."""
+    filename = f"{ck.lower()}.docx"
+    filepath = os.path.join(SYLLABI_DIR, filename)
+    if not os.path.exists(filepath):
+        return f"No syllabus found for {ck}", 404
+    return send_from_directory(SYLLABI_DIR, filename, as_attachment=True)
 
 @app.route("/api/emails")
 def api_emails():
